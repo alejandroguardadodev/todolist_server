@@ -62,15 +62,20 @@ func RouteMilewareAuth(auth *authenticator.Authenticator) fiber.Handler {
 
 		token := authstrs[1]
 
-		issuerURL, err := url.Parse("https://" + os.Getenv("AUTH0_DOMAIN") + "/")
+		issuerURL, issuerURLErr := url.Parse("https://" + os.Getenv("AUTH0_DOMAIN") + "/")
 
-		if err != nil {
-			log.Fatalf("Failed to parse the issuer url: %v", err)
+		if issuerURLErr != nil {
+			log.Println("Error Auth:", issuerURLErr.Error())
+
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"err_type": types.ERR_TYPE_MESSAGE,
+				"msg":      "An unexpected error has occurred on the server",
+			})
 		}
 
 		provider := jwks.NewCachingProvider(issuerURL, 5*time.Minute)
 
-		jwtValidator, err := validator.New(
+		jwtValidator, jwtValidatorErr := validator.New(
 			provider.KeyFunc,
 			validator.RS256,
 			issuerURL.String(),
@@ -83,13 +88,29 @@ func RouteMilewareAuth(auth *authenticator.Authenticator) fiber.Handler {
 			validator.WithAllowedClockSkew(time.Minute),
 		)
 
-		claims, errValidate := jwtValidator.ValidateToken(c.UserContext(), token)
+		if jwtValidatorErr != nil {
+			log.Println("Error Auth:", jwtValidatorErr.Error())
 
-		if errValidate != nil {
-			log.Fatalf("Failed JWT: %v", errValidate)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"err_type": types.ERR_TYPE_MESSAGE,
+				"msg":      "An unexpected error has occurred on the server",
+			})
 		}
 
-		log.Println(claims)
+		claims, claimsErr := jwtValidator.ValidateToken(c.UserContext(), token)
+
+		if claimsErr != nil {
+			log.Println("Error Auth:", claimsErr.Error())
+
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"err_type": types.ERR_TYPE_MESSAGE,
+				"msg":      "Invalid token",
+			})
+		}
+
+		dic := claims.(*validator.ValidatedClaims)
+
+		c.Locals("user", dic.RegisteredClaims.Subject)
 
 		return c.Next()
 	}

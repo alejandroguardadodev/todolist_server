@@ -12,9 +12,10 @@ import (
 )
 
 func GetAllProjects(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
 	projects := []models.Project{}
 
-	if err := database.DB.Where(models.Project{}).Order("created_at").Find(&projects).Error; err != nil {
+	if err := database.DB.Where(models.Project{User: user}).Order("created_at").Find(&projects).Error; err != nil {
 		log.Println("Error Project: ", err)
 
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
@@ -33,6 +34,7 @@ func GetAllProjects(c *fiber.Ctx) error {
 }
 
 func GetProjectById(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
 	id, err := c.ParamsInt("id")
 
 	if err != nil {
@@ -45,7 +47,8 @@ func GetProjectById(c *fiber.Ctx) error {
 	}
 
 	project := models.Project{
-		ID: uint(id),
+		ID:   uint(id),
+		User: user,
 	}
 
 	if err := database.DB.Where(project).First(&project).Error; err != nil {
@@ -61,7 +64,7 @@ func GetProjectById(c *fiber.Ctx) error {
 }
 
 func UpdateProject(c *fiber.Ctx) error {
-	user := "1"
+	user := c.Locals("user").(string)
 
 	id, err := c.ParamsInt("id")
 
@@ -112,11 +115,15 @@ func UpdateProject(c *fiber.Ctx) error {
 }
 
 func RegisterProject(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
+
 	var project models.Project
 
 	if err := c.BodyParser(&project); err != nil {
 		return c.Status(http.StatusBadRequest).SendString(types.ERR_MSG_BAR_BODY_PARSE)
 	}
+
+	project.User = user
 
 	if projectErrFields, err := project.Validate(); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
