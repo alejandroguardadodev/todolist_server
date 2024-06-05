@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 
+	"todolistserver.com/test/authenticator"
 	"todolistserver.com/test/database"
 	"todolistserver.com/test/models"
 	"todolistserver.com/test/routes"
@@ -29,6 +30,12 @@ func main() {
 
 	app := fiber.New()
 
+	auth, err := authenticator.New()
+
+	if err != nil {
+		log.Fatalf("Failed to initialize the authenticator: %v", err)
+	}
+
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "http://localhost:5173",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
@@ -38,7 +45,7 @@ func main() {
 
 	validation.ValidationInit()
 
-	routes.Register(app)
+	routes.Register(app, auth)
 
 	log.Fatal(app.Listen(url))
 }
