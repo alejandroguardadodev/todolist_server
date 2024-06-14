@@ -18,7 +18,7 @@ import (
 
 func migrate() {
 	log.Println("Running Migation")
-	database.DB.AutoMigrate(&models.Project{})
+	database.DB.AutoMigrate(&models.Project{}, &models.Task{})
 }
 
 func main() {

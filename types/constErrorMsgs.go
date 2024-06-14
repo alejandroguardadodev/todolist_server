@@ -8,4 +8,5 @@ const (
 	ERR_MSG_NOT_FOUND              string = "Unable to find any %s"
 	ERR_MSG_JWT                    string = "There has been an error generating a new token."
 	ERR_NOT_USER_RELEATED_TO_TOKEN string = "Insufficient permissions."
+	ERR_UNEXPECTED                 string = "There has been an unexpected error."
 )

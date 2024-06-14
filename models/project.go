@@ -1,6 +1,8 @@
 package models
 
 import (
+	"os"
+	"strings"
 	"time"
 
 	"todolistserver.com/test/validation"
@@ -46,4 +48,12 @@ func (p Project) Validate() (*[]validation.ErrField, error) {
 	}
 
 	return nil, nil
+}
+
+func GetDefaultProjectTitle(user string) *string {
+	projecttitle := os.Getenv("PROJECT_DEFAULT_ID") + "_" + user
+	projecttitle = strings.Replace(projecttitle, "-", "_", -1)
+	projecttitle = strings.Replace(projecttitle, "|", "_", -1)
+
+	return &projecttitle
 }

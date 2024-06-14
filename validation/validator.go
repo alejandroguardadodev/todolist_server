@@ -15,7 +15,11 @@ type ErrField struct {
 var Validate *validator.Validate
 
 func registerCustomValidations() {
+	Validate.RegisterValidation("customRequiredEnum", customValidationRequiredEnum)
+	Validate.RegisterValidation("customCheckEnumValue", customValidationCheckEnumVal)
 
+	Validate.RegisterValidation("customValidDate", customValidationDate)
+	Validate.RegisterValidation("customValiDateAfterOrEqualThanToday", customValidationDateAfterOrEqualThanToday)
 }
 
 func getJsonTag(fieldname string, val reflect.Value) string {

@@ -17,10 +17,17 @@ func registerProjectRoutes(api fiber.Router) {
 	projectsRoute.Delete("/:id", controllers.DeleteProject)
 }
 
+func registerProjectTasksRoutes(api fiber.Router) {
+	projectsRoute := api.Group("/projects/:projectid/tasks")
+
+	projectsRoute.Post("/", controllers.RegisterTask)
+}
+
 func Register(app *fiber.App, auth *authenticator.Authenticator) {
 	api := app.Group("/api")
 
 	api.Use(midlewares.RouteMilewareAuth(auth))
+	api.Use(midlewares.PrepeareProjectDefault)
 
 	//store := session.New()
 
@@ -28,4 +35,5 @@ func Register(app *fiber.App, auth *authenticator.Authenticator) {
 
 	// SET GROUPS -------------------------
 	registerProjectRoutes(api)
+	registerProjectTasksRoutes(api)
 }

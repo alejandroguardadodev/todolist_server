@@ -1,7 +1,6 @@
 package midlewares
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -11,33 +10,27 @@ import (
 	"todolistserver.com/test/types"
 )
 
-func RoutesGetProjectByIdMildware(c *fiber.Ctx) error {
-
-	id, err := c.ParamsInt("id")
-
-	if err != nil {
-		log.Println("Error Project: Bad Request")
-
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"err_type": types.ERR_TYPE_MESSAGE,
-			"msg":      "Invalid project ID",
-		})
-	}
+func PrepeareProjectDefault(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
 
 	project := models.Project{
-		ID: uint(id),
+		Title: *models.GetDefaultProjectTitle(user),
+		User:  user,
 	}
 
-	if err := database.DB.Where(project).First(&project).Error; err != nil {
-		log.Println("Error Project: ", err)
+	var counts int64
+	database.DB.Model(&models.Project{}).Where(project).Count(&counts)
 
-		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"err_type": types.ERR_TYPE_MESSAGE,
-			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "project"),
-		})
+	if counts <= 0 {
+		if err := database.DB.Create(&project).Error; err != nil {
+			log.Println("Error Project: ", err)
+
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{ // ANY UNEXPECTED ERR
+				"msg":      types.ERR_UNEXPECTED,
+				"err_type": types.ERR_TYPE_MESSAGE,
+			})
+		}
 	}
-
-	c.Locals("project", project)
 
 	return c.Next()
 }
