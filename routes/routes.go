@@ -14,6 +14,7 @@ func registerProjectRoutes(api fiber.Router) {
 	projectsRoute.Get("/:id", controllers.GetProjectById)
 	projectsRoute.Post("/", controllers.RegisterProject)
 	projectsRoute.Put("/:id", controllers.UpdateProject)
+	projectsRoute.Delete("/:id", controllers.DeleteProject)
 }
 
 func Register(app *fiber.App, auth *authenticator.Authenticator) {

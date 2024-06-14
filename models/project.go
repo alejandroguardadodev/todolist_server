@@ -28,6 +28,15 @@ func (p Project) GetCompressedProjectVersion() *CompressedProject {
 	return &compress
 }
 
+func (p Project) GetDictionary() *Dictionary {
+	dic := Dictionary{
+		"id":    p.ID,
+		"title": p.Title,
+	}
+
+	return &dic
+}
+
 func (p Project) Validate() (*[]validation.ErrField, error) {
 
 	if err := validation.Validate.StructExcept(p, "Project"); err != nil {

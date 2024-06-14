@@ -24,10 +24,10 @@ func GetAllProjects(c *fiber.Ctx) error {
 		})
 	}
 
-	_projects := []models.CompressedProject{}
+	_projects := []models.Dictionary{}
 
 	for _, project := range projects {
-		_projects = append(_projects, *project.GetCompressedProjectVersion())
+		_projects = append(_projects, *project.GetDictionary())
 	}
 
 	return c.Status(http.StatusOK).JSON(_projects)
@@ -60,7 +60,7 @@ func GetProjectById(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(http.StatusOK).JSON(project.GetCompressedProjectVersion())
+	return c.Status(http.StatusOK).JSON(project.GetDictionary())
 }
 
 func UpdateProject(c *fiber.Ctx) error {
@@ -111,7 +111,7 @@ func UpdateProject(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(http.StatusOK).JSON(project.GetCompressedProjectVersion())
+	return c.Status(http.StatusOK).JSON(project.GetDictionary())
 }
 
 func RegisterProject(c *fiber.Ctx) error {
@@ -153,5 +153,36 @@ func RegisterProject(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(http.StatusOK).JSON(project.GetCompressedProjectVersion())
+	return c.Status(http.StatusOK).JSON(project.GetDictionary())
+}
+
+func DeleteProject(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
+
+	id, err := c.ParamsInt("id")
+
+	if err != nil {
+		log.Println("Error Project: Bad Request")
+
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      "Invalid project ID",
+		})
+	}
+
+	project := models.Project{
+		ID:   uint(id),
+		User: user,
+	}
+
+	if err := database.DB.Where(project).Delete(&project).Error; err != nil {
+		log.Println("Error Project: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "project"),
+		})
+	}
+
+	return c.Status(http.StatusOK).JSON(project.GetDictionary())
 }
