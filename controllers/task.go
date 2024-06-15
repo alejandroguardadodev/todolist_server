@@ -11,6 +11,33 @@ import (
 	"todolistserver.com/test/types"
 )
 
+func GetAllTasks(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
+
+	var projectsID []uint
+
+	database.DB.Model(models.Project{}).Where(&models.Project{User: user}).Pluck("id", &projectsID)
+
+	tasks := []models.Task{}
+
+	if err := database.DB.Preload("Project").Where("project_id IN ?", projectsID).Order("created_at").Find(&tasks).Error; err != nil {
+		log.Println("Error Tasks: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "tasks"),
+		})
+	}
+
+	_tasks := []models.Dictionary{}
+
+	for _, task := range tasks {
+		_tasks = append(_tasks, *task.GetDictionary(task.Project.Title == *models.GetDefaultProjectTitle(user)))
+	}
+
+	return c.Status(http.StatusOK).JSON(_tasks)
+}
+
 func RegisterTask(c *fiber.Ctx) error {
 	user := c.Locals("user").(string)
 	isDefaultProject := false
@@ -49,10 +76,12 @@ func RegisterTask(c *fiber.Ctx) error {
 	task.ProjectID = project.ID
 	task.Project = project
 
+	task.AdjustDates()
+
 	if taskErrFields, err := task.Validate(); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"err_fields": taskErrFields,
-			"err_type":   types.ERR_TYPE_BY_MULTIPLE_FIELDS,
+			"fields":   taskErrFields,
+			"err_type": types.ERR_TYPE_BY_MULTIPLE_FIELDS,
 		})
 	}
 

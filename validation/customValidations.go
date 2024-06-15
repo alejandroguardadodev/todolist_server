@@ -49,6 +49,10 @@ func customValidationDateAfterOrEqualThanToday(fl validator.FieldLevel) bool {
 		return true
 	}
 
+	if strings.Contains(val, "T") {
+		val = strings.Split(val, "T")[0]
+	}
+
 	date, err := time.Parse(time.DateOnly, val)
 
 	if err != nil {
@@ -56,5 +60,7 @@ func customValidationDateAfterOrEqualThanToday(fl validator.FieldLevel) bool {
 		return false
 	}
 
-	return !date.Before(time.Now())
+	log.Println(val + " - " + time.Now().String())
+
+	return date.Before(time.Now())
 }

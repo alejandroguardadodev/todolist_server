@@ -20,6 +20,7 @@ func registerProjectRoutes(api fiber.Router) {
 func registerProjectTasksRoutes(api fiber.Router) {
 	projectsRoute := api.Group("/tasks")
 
+	projectsRoute.Get("/", controllers.GetAllTasks)
 	projectsRoute.Post("/", controllers.RegisterTask)
 }
 

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"todolistserver.com/test/models/customtypes"
@@ -40,12 +41,24 @@ func (t Task) GetDictionary(isDefaultProject bool) *Dictionary {
 	return &dic
 }
 
-func (p Task) Validate() (*[]validation.ErrField, error) {
+func (t *Task) AdjustDates() {
+	if len(strings.Trim(t.DueDate, " ")) > 0 && strings.Contains(t.DueDate, "T") {
+		t.DueDate = strings.Split(t.DueDate, "T")[0]
+	}
+}
+
+func (p Task) Validate() (Dictionary, error) {
 
 	if err := validation.Validate.StructExcept(p, "Project"); err != nil {
 		errFields := validation.GetValidateInformation(err, p)
 
-		return errFields, err
+		errs := Dictionary{}
+
+		for _, field := range *errFields {
+			errs[field.FieldName] = field.ErrorTitle
+		}
+
+		return errs, err
 	}
 
 	return nil, nil
