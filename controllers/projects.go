@@ -216,6 +216,15 @@ func DeleteProject(c *fiber.Ctx) error {
 		})
 	}
 
+	if err := database.DB.Where(&models.Task{ProjectID: project.ID}).Delete(&[]models.Task{}).Error; err != nil {
+		log.Println("Error Tasts By Project: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      types.ERR_UNEXPECTED,
+		})
+	}
+
 	if err := database.DB.Where(project).Delete(&project).Error; err != nil {
 		log.Println("Error Project: ", err)
 

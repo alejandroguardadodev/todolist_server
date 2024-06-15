@@ -9,28 +9,32 @@ import (
 
 type Task struct {
 	ID          uint                              `json:"id" gorm:"primaryKey;autoIncrement"`
-	Task        string                            `json:"task" gorm:"not null;type:varchar(100)" validate:"required"`
+	Title       string                            `json:"title" gorm:"not null;type:varchar(100)" validate:"required"`
 	Description string                            `json:"description" gorm:"type:text"`
 	Status      customtypes.CustomeTaskStatusType `json:"status" gorm:"not null;type:task_status_type" validate:"customRequiredEnum,customCheckEnumValue"`
-	ProjectID   int                               `json:"project_id"`
+	ProjectID   uint                              `json:"project_id" gorm:"not null" validate:"required"`
 	Project     Project                           `gorm:"foreignKey:ProjectID"`
-	Due         string                            `json:"due_date" gorm:"type:Date" validate:"required,customValidDate,customValiDateAfterOrEqualThanToday"`
+	DueDate     string                            `json:"due_date" gorm:"type:text" validate:"customValidDate,customValiDateAfterOrEqualThanToday"`
 	DueTime     string                            `json:"due_time"`
 	Starred     bool                              `json:"starred" gorm:"default:false"`
 	CreatedAt   time.Time
 	UpdateAt    time.Time
 }
 
-func (t Task) GetDictionary() *Dictionary {
+func (t Task) GetDictionary(isDefaultProject bool) *Dictionary {
 	dic := Dictionary{
 		"id":          t.ID,
-		"task":        t.Task,
+		"title":       t.Title,
 		"description": t.Description,
 		"status":      t.Status.String(),
 		"project":     t.Project.GetDictionary(),
-		"due":         t.Due,
+		"due_date":    t.DueDate,
 		"due_time":    t.DueTime,
 		"starred":     t.Starred,
+	}
+
+	if isDefaultProject {
+		dic["project"] = ""
 	}
 
 	return &dic

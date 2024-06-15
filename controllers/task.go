@@ -13,30 +13,32 @@ import (
 
 func RegisterTask(c *fiber.Ctx) error {
 	user := c.Locals("user").(string)
-	projectid, err := c.ParamsInt("projectid")
-
-	if err != nil {
-		log.Println("Error Project: Bad Request")
-
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"err_type": types.ERR_TYPE_MESSAGE,
-			"msg":      "Invalid project ID",
-		})
-	}
+	isDefaultProject := false
 
 	var task models.Task
 
 	if err := c.BodyParser(&task); err != nil {
+		log.Println("Error Task: ", err)
 		return c.Status(http.StatusBadRequest).SendString(types.ERR_MSG_BAR_BODY_PARSE)
 	}
 
 	project := models.Project{
-		ID:   uint(projectid),
+		ID:   uint(task.ProjectID),
 		User: user,
 	}
 
-	if err := database.DB.Where(project).First(&project).Error; err != nil {
-		log.Println("Error Project: ", err)
+	if project.ID == 0 {
+		if err := database.DB.Where(models.Project{Title: *models.GetDefaultProjectTitle(user)}).First(&project).Error; err != nil {
+			log.Println("Error Task: ", err)
+
+			return c.Status(http.StatusNotFound).JSON(fiber.Map{
+				"err_type": types.ERR_TYPE_MESSAGE,
+				"msg":      types.ERR_UNEXPECTED,
+			})
+		}
+		isDefaultProject = true
+	} else if err := database.DB.Where(project).First(&project).Error; err != nil {
+		log.Println("Error Task: ", err)
 
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
 			"err_type": types.ERR_TYPE_MESSAGE,
@@ -44,7 +46,7 @@ func RegisterTask(c *fiber.Ctx) error {
 		})
 	}
 
-	task.ProjectID = projectid
+	task.ProjectID = project.ID
 	task.Project = project
 
 	if taskErrFields, err := task.Validate(); err != nil {
@@ -63,5 +65,5 @@ func RegisterTask(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(http.StatusOK).JSON(task.GetDictionary())
+	return c.Status(http.StatusOK).JSON(task.GetDictionary(isDefaultProject))
 }

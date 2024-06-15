@@ -3,6 +3,7 @@ package validation
 import (
 	"log"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -25,9 +26,16 @@ func customValidationCheckEnumVal(fl validator.FieldLevel) bool {
 // The customValidationDate function in Go checks if a field value matches yyyy-mm-dd format regex
 // pattern.
 func customValidationDate(fl validator.FieldLevel) bool {
+
+	val := fl.Field().String()
+
+	if len(strings.Trim(val, " ")) == 0 {
+		return true
+	}
+
 	strRegexDate := "\\d{4}-\\d{1,2}-\\d{1,2}"
 
-	match, _ := regexp.MatchString(strRegexDate, fl.Field().String())
+	match, _ := regexp.MatchString(strRegexDate, val)
 
 	return match
 }
@@ -35,7 +43,13 @@ func customValidationDate(fl validator.FieldLevel) bool {
 // The function `customValidationDateLessThanNow` checks if a given date is before the current time.
 func customValidationDateAfterOrEqualThanToday(fl validator.FieldLevel) bool {
 
-	date, err := time.Parse(time.DateOnly, fl.Field().String())
+	val := fl.Field().String()
+
+	if len(strings.Trim(val, " ")) == 0 {
+		return true
+	}
+
+	date, err := time.Parse(time.DateOnly, val)
 
 	if err != nil {
 		log.Println(err)

@@ -18,7 +18,7 @@ func registerProjectRoutes(api fiber.Router) {
 }
 
 func registerProjectTasksRoutes(api fiber.Router) {
-	projectsRoute := api.Group("/projects/:projectid/tasks")
+	projectsRoute := api.Group("/tasks")
 
 	projectsRoute.Post("/", controllers.RegisterTask)
 }
