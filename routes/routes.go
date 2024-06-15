@@ -22,6 +22,7 @@ func registerProjectTasksRoutes(api fiber.Router) {
 
 	projectsRoute.Get("/", controllers.GetAllTasks)
 	projectsRoute.Post("/", controllers.RegisterTask)
+	projectsRoute.Put("/:id/star", controllers.UpdateStarredTask)
 }
 
 func Register(app *fiber.App, auth *authenticator.Authenticator) {
