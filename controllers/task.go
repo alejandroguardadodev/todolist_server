@@ -113,7 +113,65 @@ func UpdateStarredTask(c *fiber.Ctx) error {
 
 	task.Starred = starred.Starred
 
-	if err := database.DB.Model(&task).Updates(task).Error; err != nil {
+	if err := database.DB.Model(&task).Updates(task.GetDictionaryToUpdate()).Error; err != nil {
+		log.Println("Error Task: ", err)
+
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{ // ANY UNEXPECTED ERR
+			"msg":      fmt.Sprintf(types.ERR_MSG_SEVER_UPDATE_ENTITY, "Task"),
+			"err_type": types.ERR_TYPE_MESSAGE,
+		})
+	}
+
+	return c.Status(http.StatusOK).JSON(task.GetDictionary(task.Project.Title == *models.GetDefaultProjectTitle(user)))
+}
+
+func UpdateTask(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
+	id, err := c.ParamsInt("id")
+
+	if err != nil {
+		log.Println("Error Task: Bad Request")
+
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      "Invalid task ID",
+		})
+	}
+
+	task := models.Task{
+		ID: uint(id),
+	}
+
+	if err := database.DB.Where(task).First(&task).Error; err != nil {
+		log.Println("Error Task: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "task"),
+		})
+	}
+
+	if err := c.BodyParser(&task); err != nil {
+		return c.Status(http.StatusBadRequest).SendString(types.ERR_MSG_BAR_BODY_PARSE)
+	}
+
+	var counts int64
+
+	database.DB.Model(&models.Project{}).Where(models.Project{
+		ID:   uint(task.ProjectID),
+		User: user,
+	}).Count(&counts)
+
+	if counts <= 0 {
+		log.Println("Error Project Task: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "task"),
+		})
+	}
+
+	if err := database.DB.Model(&task).Updates(task.GetDictionaryToUpdate()).Error; err != nil {
 		log.Println("Error Task: ", err)
 
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{ // ANY UNEXPECTED ERR
@@ -182,4 +240,53 @@ func RegisterTask(c *fiber.Ctx) error {
 	}
 
 	return c.Status(http.StatusOK).JSON(task.GetDictionary(isDefaultProject))
+}
+
+func DeleteTask(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
+	id, err := c.ParamsInt("id")
+
+	if err != nil {
+		log.Println("Error Task: Bad Request")
+
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      "Invalid Task ID",
+		})
+	}
+
+	task := models.Task{
+		ID: uint(id),
+	}
+
+	if err := database.DB.Preload("Project").Where(task).First(&task).Error; err != nil {
+		log.Println("Error Task: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "task"),
+		})
+	}
+
+	if task.Project.User != user {
+		log.Println("Error Task: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      "You do not have the necessary permissions to delete the task",
+		})
+	}
+
+	// -------------
+
+	if err := database.DB.Where(task).Delete(&task).Error; err != nil {
+		log.Println("Error Project: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "project"),
+		})
+	}
+
+	return c.Status(http.StatusOK).JSON(task.GetDictionary(task.Project.Title == *models.GetDefaultProjectTitle(user)))
 }

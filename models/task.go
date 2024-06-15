@@ -22,6 +22,20 @@ type Task struct {
 	UpdateAt    time.Time
 }
 
+func (t Task) GetDictionaryToUpdate() map[string]interface{} {
+	dic := map[string]interface{}{
+		"title":       t.Title,
+		"description": t.Description,
+		"status":      t.Status.String(),
+		"project_id":  t.ProjectID,
+		"due_date":    t.DueDate,
+		"due_time":    t.DueTime,
+		"starred":     t.Starred,
+	}
+
+	return dic
+}
+
 func (t Task) GetDictionary(isDefaultProject bool) *Dictionary {
 	dic := Dictionary{
 		"id":          t.ID,
