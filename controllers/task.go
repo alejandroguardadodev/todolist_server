@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"todolistserver.com/test/database"
@@ -14,13 +16,26 @@ import (
 func GetAllTasks(c *fiber.Ctx) error {
 	user := c.Locals("user").(string)
 
+	limit, limiterr := strconv.Atoi(c.Query("limit", "10"))
+	page, pageerr := strconv.Atoi(c.Query("page", "0"))
+	orderby := c.Query("orderby", "created_at")
+	order := c.Query("order", "asc")
+
+	if limiterr != nil {
+		limit = 10
+	}
+
+	if pageerr != nil {
+		page = 0
+	}
+
 	var projectsID []uint
 
 	database.DB.Model(models.Project{}).Where(&models.Project{User: user}).Pluck("id", &projectsID)
 
 	tasks := []models.Task{}
 
-	if err := database.DB.Preload("Project").Where("project_id IN ?", projectsID).Order("created_at").Find(&tasks).Error; err != nil {
+	if err := database.DB.Preload("Project").Where("project_id IN ?", projectsID).Order(fmt.Sprintf("%s %s", orderby, strings.ToUpper(order))).Limit(limit).Offset(page * limit).Find(&tasks).Error; err != nil {
 		log.Println("Error Tasks: ", err)
 
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
@@ -29,13 +44,19 @@ func GetAllTasks(c *fiber.Ctx) error {
 		})
 	}
 
+	var counts int64
+	database.DB.Model(&models.Task{}).Where("project_id IN ?", projectsID).Count(&counts)
+
 	_tasks := []models.Dictionary{}
 
 	for _, task := range tasks {
 		_tasks = append(_tasks, *task.GetDictionary(task.Project.Title == *models.GetDefaultProjectTitle(user)))
 	}
 
-	return c.Status(http.StatusOK).JSON(_tasks)
+	return c.Status(http.StatusOK).JSON(fiber.Map{
+		"tasks": _tasks,
+		"total": counts,
+	})
 }
 
 func RegisterTask(c *fiber.Ctx) error {
