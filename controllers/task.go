@@ -13,6 +13,75 @@ import (
 	"todolistserver.com/test/types"
 )
 
+func GetAllTasksByProjectId(c *fiber.Ctx) error {
+	user := c.Locals("user").(string)
+
+	projectid, err := c.ParamsInt("projectid")
+
+	if err != nil {
+		log.Println("Error Task: Bad Request")
+
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      "Invalid task ID",
+		})
+	}
+
+	var projectsCounts int64
+
+	database.DB.Model(&models.Project{}).Where(models.Project{
+		ID:   uint(projectid),
+		User: user,
+	}).Count(&projectsCounts)
+
+	if projectsCounts <= 0 {
+		log.Println("Error Project Task: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "project"),
+		})
+	}
+
+	limit, limiterr := strconv.Atoi(c.Query("limit", "10"))
+	page, pageerr := strconv.Atoi(c.Query("page", "0"))
+	orderby := c.Query("orderby", "created_at")
+	order := c.Query("order", "asc")
+
+	if limiterr != nil {
+		limit = 10
+	}
+
+	if pageerr != nil {
+		page = 0
+	}
+
+	tasks := []models.Task{}
+
+	if err := database.DB.Preload("Project").Where("project_id = ?", projectid).Order(fmt.Sprintf("%s %s", orderby, strings.ToUpper(order))).Limit(limit).Offset(page * limit).Find(&tasks).Error; err != nil {
+		log.Println("Error Tasks: ", err)
+
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"err_type": types.ERR_TYPE_MESSAGE,
+			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "tasks"),
+		})
+	}
+
+	var counts int64
+	database.DB.Model(&models.Task{}).Where("project_id = ?", projectid).Count(&counts)
+
+	_tasks := []models.Dictionary{}
+
+	for _, task := range tasks {
+		_tasks = append(_tasks, *task.GetDictionary(task.Project.Title == *models.GetDefaultProjectTitle(user)))
+	}
+
+	return c.Status(http.StatusOK).JSON(fiber.Map{
+		"tasks": _tasks,
+		"total": counts,
+	})
+}
+
 func GetAllTasks(c *fiber.Ctx) error {
 	user := c.Locals("user").(string)
 
@@ -155,14 +224,24 @@ func UpdateTask(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).SendString(types.ERR_MSG_BAR_BODY_PARSE)
 	}
 
-	var counts int64
-
-	database.DB.Model(&models.Project{}).Where(models.Project{
+	project := models.Project{
 		ID:   uint(task.ProjectID),
 		User: user,
-	}).Count(&counts)
+	}
 
-	if counts <= 0 {
+	isDefaultProject := false
+
+	if project.ID == 0 {
+		if err := database.DB.Where(models.Project{Title: *models.GetDefaultProjectTitle(user)}).First(&project).Error; err != nil {
+			log.Println("Error Project Task: ", err)
+
+			return c.Status(http.StatusNotFound).JSON(fiber.Map{
+				"err_type": types.ERR_TYPE_MESSAGE,
+				"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "task"),
+			})
+		}
+		isDefaultProject = true
+	} else if err := database.DB.Where(project).First(&project).Error; err != nil {
 		log.Println("Error Project Task: ", err)
 
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
@@ -170,6 +249,8 @@ func UpdateTask(c *fiber.Ctx) error {
 			"msg":      fmt.Sprintf(types.ERR_MSG_NOT_FOUND, "task"),
 		})
 	}
+
+	task.ProjectID = project.ID
 
 	if err := database.DB.Model(&task).Updates(task.GetDictionaryToUpdate()).Error; err != nil {
 		log.Println("Error Task: ", err)
@@ -180,7 +261,7 @@ func UpdateTask(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(http.StatusOK).JSON(task.GetDictionary(task.Project.Title == *models.GetDefaultProjectTitle(user)))
+	return c.Status(http.StatusOK).JSON(task.GetDictionary(isDefaultProject))
 }
 
 func RegisterTask(c *fiber.Ctx) error {

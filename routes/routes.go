@@ -15,6 +15,8 @@ func registerProjectRoutes(api fiber.Router) {
 	projectsRoute.Post("/", controllers.RegisterProject)
 	projectsRoute.Put("/:id", controllers.UpdateProject)
 	projectsRoute.Delete("/:id", controllers.DeleteProject)
+
+	projectsRoute.Get("/:projectid/tasks", controllers.GetAllTasksByProjectId)
 }
 
 func registerProjectTasksRoutes(api fiber.Router) {
