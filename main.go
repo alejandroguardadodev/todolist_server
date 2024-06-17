@@ -43,7 +43,7 @@ func main() {
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
-	url := fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))
+	url := fmt.Sprintf(":%s", os.Getenv("PORT"))
 
 	validation.ValidationInit()
 
