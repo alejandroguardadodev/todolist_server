@@ -15,8 +15,9 @@ var dbConfig *dbinfo
 func Conect() {
 	dbConfig = setupDB(os.Getenv("DB_NAME"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"))
 
-	dsn := dbConfig.getStringPath()
+	dsn := dbConfig.getURI()
 
+	log.Println("DB URL:", dsn)
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
