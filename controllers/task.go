@@ -251,6 +251,7 @@ func UpdateTask(c *fiber.Ctx) error {
 	}
 
 	task.ProjectID = project.ID
+	task.AdjustDates()
 
 	if err := database.DB.Model(&task).Updates(task.GetDictionaryToUpdate()).Error; err != nil {
 		log.Println("Error Task: ", err)
