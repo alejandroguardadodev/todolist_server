@@ -39,7 +39,7 @@ func main() {
 	}
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "https://moonnuittodolist.netlify.app",
+		AllowOrigins: "https://moonnuittodolist.netlify.app", 
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
